@@ -4,7 +4,7 @@
 
 ## 说明
 
-2. 每次修改之后使用指令 `./waf --run first ` 来编译。（请注意，在 **ns-allinone-3.30.1/ns-3.30.1** 文件夹中输入上述指令，不要在 first.cc 里面去输入。
+2. 每次修改之后使用指令 `./waf --run F4_ns3 ` 来编译。（请注意，在 **ns-allinone-3.30.1/ns-3.30.1** 文件夹中输入上述指令，不要在 first.cc 里面去输入。
 2. 我们的项目文件处在 **ns-allinone-3.30.1/ns-3.30.1/scratch/f4** 下，因此在使用的时候应该首先 cd 到 scratch 目录中，然后 git clone。
 
 ## 应用层（V-Stomp）
