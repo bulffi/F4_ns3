@@ -44,13 +44,13 @@ int main(int argc, char* argv[]){
     // 应用层
     // 需要的输入是一个已经安装了 TCP 协议的 server 以及它的 ns3::Ipv4Address 
     // 一个数组，包含一组已经安装了 TCP 协议的 client
-    std::vector<Ptr<Node>>* clients = new std::vector<Ptr<Node>>();
-    clients->push_back(nodes.Get(1));
-    vStompApplication* application = new vStompApplication(nodes.Get(0),interfaces.GetAddress(0),clients);
-    application->start();
+    std::vector<Ptr<Node>> clients;
+    clients.push_back(nodes.Get(1));
+    vStompApplication application = vStompApplication(nodes.Get(0),interfaces.GetAddress(0),clients);
+    application.start();
 
-
-
+    Simulator::Stop(Seconds(20));
+    NS_LOG_INFO("The simulation begins");
     Simulator::Run ();
     Simulator::Destroy ();
 
