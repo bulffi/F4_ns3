@@ -5,7 +5,6 @@
 #include "ns3/applications-module.h"
 #include"frame.h"
 using namespace ns3;
-NS_LOG_COMPONENT_DEFINE("F4ComputerNetwork");
 
 void setServerSocket(Ptr<Socket> serverSocket, uint32_t localPort);
 void startFlow(Ptr<Socket> clientSocket, Ipv4Address address, uint32_t port);
@@ -13,15 +12,50 @@ void connectionSucceeded(Ptr<Socket> socket);
 void receiveData(Ptr<Socket> socket);
 void handleAccept(Ptr<Socket> socket, const Address& from);
 void getServerSetUp(Ptr<Socket> serverSocket);
+void display(Ptr<Socket> socket);
+void registerAnother(Ptr<Socket> socket);
+void registerAnother(Ptr<Socket> socket);
+void sendFromZZJTOSkr(Ptr<Socket> socket);
 
 class vStompServer;
 class Guard;
 class vStompClient;
 class Transmitter;
 
+vStompServer* serverPtr;
 
+class Transmitter{
+    private:
+        Ptr<Socket> targetSocket;
+    public:
+        void sendFrame(Frame frame){
+            std::string frameString = FrameToString(frame);
+            targetSocket->Send(Create<Packet>(
+                reinterpret_cast<const uint8_t*>(frameString.c_str()),frameString.length())
+            );
+        }
+        Transmitter(Ptr<Socket> ptargetSocket){
+            targetSocket = ptargetSocket;
+        }
+        Transmitter(){}
+};
 
-
+class vStompClient{
+    private:
+        Transmitter socketToClient;
+        std::string name;
+    public:
+        void getFrame(Frame frame){
+            socketToClient.sendFrame(frame);
+        }
+        vStompClient(Transmitter trans, std::string aName){
+            socketToClient = trans;
+            name = aName;
+        }
+        std::string getName(){
+            return name;
+        }
+};
 
 
 class vStompApplication {
@@ -29,38 +63,59 @@ class vStompApplication {
         vStompApplication(Ptr<Node> serverNode, Ipv4Address serverAddress, std::vector<Ptr<Node>> clients){
         serverSocket = Socket::CreateSocket(serverNode,TcpSocketFactory::GetTypeId());
         clientSocket = Socket::CreateSocket(clients.at(0),TcpSocketFactory::GetTypeId());
-        Simulator::Schedule(Seconds(0.9),&getServerSetUp, serverSocket);
+        Simulator::Schedule(Seconds(0.1),&getServerSetUp, serverSocket);
         Simulator::Schedule(
             Seconds(1.0),
             &startFlow, clientSocket, serverAddress, 8080
         );
-        // getServerSetUp();
         }
         void start(){}
     private:
         Ptr<Socket> serverSocket;
         Ptr<Socket> clientSocket;
         std::map<int,std::shared_ptr<vStompServer>> serverPool;
-        // void getServerSetUp();
     
 };
 
 
 class vStompServer{
     private:
-        std::shared_ptr<std::map<std::string,std::set<std::shared_ptr<vStompClient>>>> clientPool;
+        std::string CLASSNAME = "Server:    ";
+        std::map<std::string,std::set<std::shared_ptr<vStompClient>>> clientPool;
         std::shared_ptr<Guard> guard;
     public:
         void addClient(std::shared_ptr<vStompClient> client){
-
+            std::string name = client->getName();
+            std::set<std::shared_ptr<vStompClient>> subscribers;
+            subscribers.insert(client);
+            clientPool[name] = subscribers;
+            NS_LOG_INFO(CLASSNAME +  name + " is registered");
         }
-        void deleteClient(std::shared_ptr<std::string> clientName){
-
+        void deleteClient(std::string clientName){
+            auto iter = clientPool.find(clientName);
+            if(iter!=clientPool.end()){
+                clientPool.erase(iter);
+            }
+            NS_LOG_INFO(CLASSNAME + clientName + " is leaving.");
         }
-        void sendFrameTo(std::shared_ptr<std::string>, Ptr<Frame> frame){
-
+        void sendFrameTo(std::string channelName, Frame frame){
+            auto iter = clientPool.find(channelName);
+            if(iter!=clientPool.end()){
+                std::set<std::shared_ptr<vStompClient>> subscribers = iter->second;
+                for(auto iter = subscribers.begin();iter!=subscribers.end();iter++){
+                    (*iter)->getFrame(frame);
+                }
+            }
+            NS_LOG_INFO(CLASSNAME + "Send frame to every subs of " + channelName);
         }
-
+        void addSubscription(std::string userName, std::string channelName){
+            std::set<std::shared_ptr<vStompClient>> temptClient = clientPool[userName];
+            std::shared_ptr<vStompClient> client = *(temptClient.begin());
+            std::set<std::shared_ptr<vStompClient>> channelSubsribers = clientPool[channelName];
+            channelSubsribers.insert(client);
+            clientPool[channelName] = channelSubsribers;
+            NS_LOG_INFO(CLASSNAME + userName +" is add to group " + channelName);
+        }
         vStompServer(Ptr<Socket> serverSocket);
         
 };
@@ -96,88 +151,79 @@ class Guard{
             std::ostringstream* contentStream = new std::ostringstream();
             pkt->CopyData(contentStream,(uint32_t)INT_MAX);
             std::string content = (*contentStream).str();
-            std::shared_ptr<Frame> frame = StringToFrame(content);
-            dealWithFrame(frame);
+            Frame frame = StringToFrame(content);
+            dealWithFrame(frame,socket);
         }
-        void dealWithFrame(std::shared_ptr<Frame> frame);
+        void dealWithFrame(Frame frame,Ptr<Socket> socket);
 };
-
-
-class vStompClient{
-    private:
-        std::shared_ptr<Transmitter> server;
-        std::shared_ptr<std::string> name;
-    public:
-        void getFrame(std::shared_ptr<Frame> frame){
-        }
-        void sendFrame(std::shared_ptr<Frame> frame){
-        }
-};
-
-class Transmitter{
-    private:
-        Ptr<Socket> targetSocket;
-    public:
-        void sendFrame(std::shared_ptr<Frame> frame){
-
-        }
-};
-
-
-
-
-
-
-
 
 void startFlow(Ptr<Socket> clientSocket, Ipv4Address address, uint32_t port){
     clientSocket->Bind();
     clientSocket->Connect(InetSocketAddress(address,port));
     clientSocket->SetConnectCallback(MakeCallback(&connectionSucceeded),MakeNullCallback<void,Ptr<Socket>>());
+    clientSocket->SetRecvCallback(MakeCallback(&display));
+}
+
+void display(Ptr<Socket> socket){
+    Ptr<Packet> packet = socket->Recv();
+    std::ostringstream* contentStream = new std::ostringstream();
+    packet->CopyData(contentStream,(uint32_t)INT_MAX);
+    std::string content = (*contentStream).str();
+    NS_LOG_INFO("Client    :\" " + content  + " \"");
 }
 
 void connectionSucceeded(Ptr<Socket> socket){
-    socket->Send(Create<Packet>(512));
-    Simulator::Schedule(Seconds(4),connectionSucceeded,socket);
+    std::string content = "CONNECT\nname:zzj\n\n\000";
+    socket->Send(Create<Packet>(
+        reinterpret_cast<const uint8_t*>(content.c_str()),content.length()));
+    Simulator::Schedule(Seconds(4),registerAnother,socket);
 }
 
+void registerAnother(Ptr<Socket> socket){
+    std::string content = "CONNECT\nname:skr\n\n\000";
+    socket->Send(Create<Packet>(
+        reinterpret_cast<const uint8_t*>(content.c_str()), content.length()));
+    Simulator::Schedule(Seconds(4),sendFromZZJTOSkr,socket);
+}
 
-
-
-
-
-
-
-
-
-
+void sendFromZZJTOSkr(Ptr<Socket> socket){
+    std::string content = "SEND\ntarget:skr\n\nHello,but what is that \000";
+    socket->Send(Create<Packet>(
+        reinterpret_cast<const uint8_t*>(content.c_str()), content.length()));
+}
 
 void getServerSetUp(Ptr<Socket> serverSocket){
-    // std::shared_ptr<vStompServer> server = std::shared_ptr<vStompServer>( new vStompServer(serverSocket));
-    new vStompServer(serverSocket);
-    //int size = serverPool.size();
-    //serverPool.insert(std::make_pair(size,server));
+    serverPtr = new vStompServer(serverSocket);
 }
 
 vStompServer::vStompServer(Ptr<Socket> serverSocket){
     guard = std::shared_ptr<Guard>(new Guard(serverSocket,std::shared_ptr<vStompServer>(this),8080));
 }
 
-void Guard::dealWithFrame(std::shared_ptr<Frame> frame){
-    NS_LOG_INFO("Parse the frame");
-    switch ((frame->command))
+void Guard::dealWithFrame(Frame frame,Ptr<Socket> socket){
+    NS_LOG_INFO(CLASSNAME + "Parse the frame");
+    switch ((frame.command))
     {
         case CONNECT:{
-            NS_LOG_INFO("This is a connect message");
+            NS_LOG_INFO(CLASSNAME + "This is a connect message");
+            Transmitter transmiter(socket);
+            std::shared_ptr<vStompClient> client(new vStompClient(transmiter,frame.head.getUserName()));
+            server->addClient(client);
+            Frame frame;
+            frame.command = CONNECTED;
+            client->getFrame(frame);
         }break;
         case SUBSCRIBE:{
-
+            NS_LOG_INFO(CLASSNAME + "This is a subscribe message");
+            server->addSubscription(frame.head.getUserName(),frame.head.getSubscribe());
         }break;
         case SEND:{
-
+            NS_LOG_INFO(CLASSNAME + "This is a send message");
+            server->sendFrameTo(frame.head.getTarget(), frame);
         }break;
         case DISCONNECT:{
-
+            NS_LOG_INFO(CLASSNAME + "This is a disconnect message");
+            server->deleteClient(frame.head.getUserName());
         }break;
         default:
             break;
