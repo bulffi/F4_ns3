@@ -3,10 +3,8 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
-
+#include "vstomp.h"
 using namespace ns3;
-
-NS_LOG_COMPONENT_DEFINE("F4ComputerNetwork");
 
 int main(int argc, char* argv[]){
 
@@ -14,11 +12,7 @@ int main(int argc, char* argv[]){
     cmd.Parse (argc, argv);
     
     Time::SetResolution (Time::NS);
-    LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
-    LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
-
-    std::cout<<"Hello world"<<std::endl;
-
+    LogComponentEnable("F4ComputerNetwork",LOG_LEVEL_INFO);
     // Physical & link
     NodeContainer nodes;
     nodes.Create (2);
@@ -29,12 +23,13 @@ int main(int argc, char* argv[]){
 
     NetDeviceContainer devices;
     devices = pointToPoint.Install (nodes);
-
+    
 
     // inter-networking
     InternetStackHelper stack;
     stack.Install (nodes);
 
+    NS_LOG_INFO("hello world");
     Ipv4AddressHelper address;
     address.SetBase ("10.1.1.0", "255.255.255.0");
 
@@ -46,24 +41,19 @@ int main(int argc, char* argv[]){
 
 
 
-    // application
-    UdpEchoServerHelper echoServer (9);
+    // 应用层
+    // 需要的输入是一个已经安装了 TCP 协议的 server 以及它的 ns3::Ipv4Address 
+    // 一个数组，包含一组已经安装了 TCP 协议的 client
+    std::vector<Ptr<Node>>* clients = new std::vector<Ptr<Node>>();
+    clients->push_back(nodes.Get(1));
+    vStompApplication* application = new vStompApplication(nodes.Get(0),interfaces.GetAddress(0),clients);
+    application->start();
 
-    ApplicationContainer serverApps = echoServer.Install (nodes.Get (1));
-    serverApps.Start (Seconds (1.0));
-    serverApps.Stop (Seconds (10.0));
 
-    UdpEchoClientHelper echoClient (interfaces.GetAddress (1), 9);
-    echoClient.SetAttribute ("MaxPackets", UintegerValue (1));
-    echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
-    echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
-
-    ApplicationContainer clientApps = echoClient.Install (nodes.Get (0));
-    clientApps.Start (Seconds (2.0));
-    clientApps.Stop (Seconds (10.0));
 
     Simulator::Run ();
     Simulator::Destroy ();
 
     return 0;
 }
+
