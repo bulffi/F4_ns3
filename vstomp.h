@@ -176,13 +176,31 @@ void connectionSucceeded(Ptr<Socket> socket){
     std::string content = "CONNECT\nname:zzj\n\n\000";
     socket->Send(Create<Packet>(
         reinterpret_cast<const uint8_t*>(content.c_str()),content.length()));
+    
+    
     Simulator::Schedule(Seconds(4),registerAnother,socket);
+}
+
+
+
+void sendInfoToChannel(Ptr<Socket> socket){
+    std::string greeting = "SEND\ntarget:hhh\n\nTry out the channel!\000";
+    socket->Send(Create<Packet>(
+        reinterpret_cast<const uint8_t*>(greeting.c_str()), greeting.length()));
+}
+
+void subsribeToChannel(Ptr<Socket>socket){
+    std::string subs = "SUBSCRIBE\nchannel:hhh\nname:zzj\n\n\000";
+     socket->Send(Create<Packet>(
+        reinterpret_cast<const uint8_t*>(subs.c_str()),subs.length()));
+    Simulator::Schedule(Seconds(1),sendInfoToChannel,socket);
 }
 
 void registerAnother(Ptr<Socket> socket){
     std::string content = "CONNECT\nname:skr\n\n\000";
     socket->Send(Create<Packet>(
         reinterpret_cast<const uint8_t*>(content.c_str()), content.length()));
+    
     Simulator::Schedule(Seconds(4),sendFromZZJTOSkr,socket);
 }
 
@@ -190,6 +208,7 @@ void sendFromZZJTOSkr(Ptr<Socket> socket){
     std::string content = "SEND\ntarget:skr\n\nHello,but what is that \000";
     socket->Send(Create<Packet>(
         reinterpret_cast<const uint8_t*>(content.c_str()), content.length()));
+    Simulator::Schedule(Seconds(1),subsribeToChannel,socket);
 }
 
 void getServerSetUp(Ptr<Socket> serverSocket){
