@@ -3,6 +3,10 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/csma-module.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/ssid.h"
 #include "vstomp.h"
 using namespace ns3;
 
@@ -12,12 +16,9 @@ int main(int argc, char* argv[]){
 
     uint32_t nCsma = 3;
     uint32_t nWifi = 3;
-    bool tracing = false;
 
-    CommandLine cmd;
     cmd.AddValue ("nCsma", "Number of \"extra\" CSMA p2pNodes/devices", nCsma);
     cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
-    cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
     
     cmd.Parse (argc, argv);
 
@@ -119,9 +120,28 @@ int main(int argc, char* argv[]){
     // 应用层
     // 需要的输入是一个已经安装了 TCP 协议的 server 以及它的 ns3::Ipv4Address 
     // 一个数组，包含一组已经安装了 TCP 协议的 client
-    std::vector<Ptr<Node>> clients;
-    clients.push_back(wifiStaNodes.Get(nWifi-1));
-    clients.push_back(wifiStaNodes.Get(1));
+
+    ClientWithMessages client1;
+    client1.node = csmaNodes.Get(1);
+    std::vector<std::string> channels;
+    channels.push_back("hhh");
+    channels.push_back("xixi");
+    std::vector<Message> messages;
+    Message message1;
+    message1.target="zzj";
+    message1.content="say hello to myself";
+    Message message2;
+    message2.target="hhh";
+    message2.content="try out my channel";
+    messages.push_back(message1);
+    messages.push_back(message2);
+    client1.userName="zzj";
+    client1.channelsTosub = channels;
+    client1.messagesToSend = messages;
+    // ClientWithMessages client2;
+    // ClientWithMessages client3;
+    std::vector<ClientWithMessages> clients;
+    clients.push_back(client1);
     vStompApplication application = vStompApplication(csmaNodes.Get(nCsma),csmaInterfaces.GetAddress(nCsma),clients);
     application.start();
 
