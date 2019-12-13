@@ -44,8 +44,27 @@ int main(int argc, char* argv[]){
     // 应用层
     // 需要的输入是一个已经安装了 TCP 协议的 server 以及它的 ns3::Ipv4Address 
     // 一个数组，包含一组已经安装了 TCP 协议的 client
-    std::vector<Ptr<Node>> clients;
-    clients.push_back(nodes.Get(1));
+    ClientWithMessages client1;
+    client1.node = nodes.Get(1);
+    std::vector<std::string> channels;
+    channels.push_back("hhh");
+    channels.push_back("xixi");
+    std::vector<Message> messages;
+    Message message1;
+    message1.target="zzj";
+    message1.content="say hello to myself";
+    Message message2;
+    message2.target="hhh";
+    message2.content="try out my channel";
+    messages.push_back(message1);
+    messages.push_back(message2);
+    client1.userName="zzj";
+    client1.channelsTosub = channels;
+    client1.messagesToSend = messages;
+    // ClientWithMessages client2;
+    // ClientWithMessages client3;
+    std::vector<ClientWithMessages> clients;
+    clients.push_back(client1);
     vStompApplication application = vStompApplication(nodes.Get(0),interfaces.GetAddress(0),clients);
     application.start();
 
