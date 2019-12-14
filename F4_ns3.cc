@@ -6,6 +6,7 @@
 #include "ns3/mobility-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/lte-module.h"
+#include "ns3/config-store-module.h"
 #include <ns3/buildings-helper.h>
 #include "vstomp.h"
 using namespace ns3;
@@ -15,24 +16,18 @@ int main(int argc, char* argv[]){
     uint16_t numEnb = 2;
     uint16_t numUePerEnb = 3;
     Time simTime = MilliSeconds (1100);
-    double distance = 60.0;
 
     CommandLine cmd;
     cmd.AddValue ("numEnb", "Number of eNodeBs", numEnb);
-    cmd.AddValue ("numUePerEnb", "Number of UE for each eNodeB", numUePerEnb)
+    cmd.AddValue ("numUePerEnb", "Number of UE for each eNodeB", numUePerEnb);
     cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
-    cmd.AddValue ("distance", "Distance between eNBs [m]", distance);
-    
-    ConfigStore inputConfig;
-    inputConfig.ConfigureDefaults ();
 
     cmd.Parse (argc, argv);
 
-    if (nWifi > 18)
-    {
-      std::cout << "nWifi should be 18 or less; otherwise grid layout exceeds the bounding box" << std::endl;
-      return 1;
-    }
+    ConfigStore inputConfig;
+    inputConfig.ConfigureDefaults ();
+
+    cmd.Parse(argc, argv);
     
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
@@ -107,7 +102,7 @@ int main(int argc, char* argv[]){
     // 一个数组，包含一组已经安装了 TCP 协议的 client
 
     ClientWithMessages client1;
-    client1.node = ueNodes.Get(1);
+    client1.node = remoteHost;
     std::vector<std::string> channels;
     channels.push_back("hhh");
     channels.push_back("xixi");
@@ -127,7 +122,7 @@ int main(int argc, char* argv[]){
     // ClientWithMessages client3;
     std::vector<ClientWithMessages> clients;
     clients.push_back(client1);
-    vStompApplication application = vStompApplication(remoteHost,remoteHostAddr,clients);
+    vStompApplication application = vStompApplication(pgw,internetIpIfaces.GetAddress(0),clients);
     application.start();
 
     Simulator::Stop(Seconds(20));
