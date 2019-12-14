@@ -28,7 +28,6 @@ int main(int argc, char* argv[]){
       return 1;
     }
     
-    Time::SetResolution (Time::NS);
     LogComponentEnable("F4ComputerNetwork",LOG_LEVEL_INFO);
     // Physical & link
     NodeContainer p2pNodes;
@@ -116,44 +115,63 @@ int main(int argc, char* argv[]){
     address.Assign (staDevices);
     address.Assign (apDevices);
 
-    Ipv4StaticRoutingHelper ipv4RoutingHelper;
-    Ptr<Ipv4StaticRouting> apStaticRouting = ipv4RoutingHelper.GetStaticRouting (p2pNodes.Get(0)->GetObject<Ipv4> ());
-    apStaticRouting->AddNetworkRouteTo (Ipv4Address("10.1.2.0"), Ipv4Mask("255.255.255.0"),2);
+    // Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    // Ptr<Ipv4StaticRouting> apStaticRouting = ipv4RoutingHelper.GetStaticRouting (p2pNodes.Get(0)->GetObject<Ipv4> ());
+    // apStaticRouting->AddNetworkRouteTo (Ipv4Address("10.1.2.0"), Ipv4Mask("255.255.255.0"),2);
 
-    Ptr<Ipv4StaticRouting> csmaStaticRouting = ipv4RoutingHelper.GetStaticRouting (csmaNodes.Get(nCsma)->GetObject<Ipv4> ());
-    csmaStaticRouting->AddNetworkRouteTo (Ipv4Address("10.1.1.0"), Ipv4Mask("255.255.255.0"),1);
+    // Ptr<Ipv4StaticRouting> csmaStaticRouting = ipv4RoutingHelper.GetStaticRouting (csmaNodes.Get(nCsma)->GetObject<Ipv4> ());
+    // csmaStaticRouting->AddNetworkRouteTo (Ipv4Address("10.1.1.0"), Ipv4Mask("255.255.255.0"),1);
 
     // 应用层
     // 需要的输入是一个已经安装了 TCP 协议的 server 以及它的 ns3::Ipv4Address 
     // 一个数组，包含一组已经安装了 TCP 协议的 client
 
-    ClientWithMessages client1;
-    client1.node = p2pNodes.Get(0);
-    std::vector<std::string> channels;
-    channels.push_back("hhh");
-    channels.push_back("xixi");
-    std::vector<Message> messages;
-    Message message1;
-    message1.target="zzj";
-    message1.content="say hello to myself";
-    Message message2;
-    message2.target="hhh";
-    message2.content="try out my channel";
-    messages.push_back(message1);
-    messages.push_back(message2);
-    client1.userName="zzj";
-    client1.channelsTosub = channels;
-    client1.messagesToSend = messages;
-    // ClientWithMessages client2;
-    // ClientWithMessages client3;
-    std::vector<ClientWithMessages> clients;
-    clients.push_back(client1);
-    vStompApplication application = vStompApplication(csmaNodes.Get(nCsma),csmaInterfaces.GetAddress(nCsma),clients);
+    // ClientWithMessages client1;
+    // client1.node = p2pNodes.Get(0);
+    // std::vector<std::string> channels;
+    // channels.push_back("hhh");
+    // channels.push_back("xixi");
+    // std::vector<Message> messages;
+    // Message message1;
+    // message1.target="zzj";
+    // message1.content="say hello to myself";
+    // Message message2;
+    // message2.target="hhh";
+    // message2.content="try out my channel";
+    // messages.push_back(message1);
+    // messages.push_back(message2);
+    // client1.userName="zzj";
+    // client1.channelsTosub = channels;
+    // client1.messagesToSend = messages;
+    // // ClientWithMessages client2;
+    // // ClientWithMessages client3;
+    // std::vector<ClientWithMessages> clients;
+    // clients.push_back(client1);
+    // vStompApplication application = vStompApplication(csmaNodes.Get(nCsma),csmaInterfaces.GetAddress(nCsma),clients);
 
-    NS_LOG_INFO(csmaInterfaces.GetAddress(nCsma));
-    application.start();
+    // NS_LOG_INFO(csmaInterfaces.GetAddress(nCsma));
+    // application.start();
 
-    Simulator::Stop(Seconds(20));
+      UdpEchoServerHelper echoServer (9);
+
+  ApplicationContainer serverApps = echoServer.Install (csmaNodes.Get (nCsma)); //ip 10.1.2.4
+  serverApps.Start (Seconds (1.0));
+  serverApps.Stop (Seconds (10.0));
+
+  UdpEchoClientHelper echoClient (csmaInterfaces.GetAddress (nCsma), 9);
+  echoClient.SetAttribute ("MaxPackets", UintegerValue (1));
+  echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+  echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+
+  ApplicationContainer clientApps = 
+    echoClient.Install (csmaNodes.Get (nCsma - 1));  //ip 10.1.3.3
+  clientApps.Start (Seconds (2.0));
+  clientApps.Stop (Seconds (10.0));
+
+  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+
+  Simulator::Stop (Seconds (10.0));
+
     NS_LOG_INFO("The simulation begins");
     Simulator::Run ();
     Simulator::Destroy ();
