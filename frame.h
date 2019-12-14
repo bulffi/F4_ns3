@@ -6,6 +6,7 @@ enum Command{
     SUBSCRIBE,
     SEND,
     DISCONNECT,
+    UNSUBSCRIBE,
 };
 class Head{
     public:
@@ -66,6 +67,9 @@ std::string FrameToString(Frame frame){
     case DISCONNECT:{
         answer += "DISCONNECT";
     }break;
+    case UNSUBSCRIBE:{
+        answer += "UNSUBSCRIBE";
+    }
     default:
         break;
     }
@@ -97,7 +101,11 @@ Frame StringToFrame(std::string stompString){
         command = SEND;
     }else if(frameCommand == "DISCONNECT"){
         command = DISCONNECT;
+    }else if(frameCommand == "UNSUBSCRIBE")
+    {
+        command = UNSUBSCRIBE;
     }
+    
     std::string line;
     Head head;
     while (std::getline(stream, line) && line!="")
