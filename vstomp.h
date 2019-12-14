@@ -86,7 +86,7 @@ class vStompApplication {
         vStompApplication(Ptr<Node> serverNode, Ipv4Address serverAddress, std::vector<ClientWithMessages> clients){
             serverSocket = Socket::CreateSocket(serverNode,TcpSocketFactory::GetTypeId());
             Simulator::Schedule(Seconds(0.1),&getServerSetUp, serverSocket);
-            for(int i=0;i<clients.size();i++) {
+            for(uint16_t i=0;i<clients.size();i++) {
                 Ptr<Socket> clientSocket = Socket::CreateSocket(clients[i].node, TcpSocketFactory::GetTypeId());
                 Simulator::Schedule(
                     Seconds(2.0 + i*0.02),
@@ -276,10 +276,10 @@ class Client{
             + "==========================================\n" + content +"\n==========================================");
             socket->Send(Create<Packet>(
             reinterpret_cast<const uint8_t*>(content.c_str()),content.length()));
-            for(int i =0;i<channelsToSebscribe.size();i++){
+            for(uint16_t i =0;i<channelsToSebscribe.size();i++){
                 Simulator::Schedule(Seconds(4 + i*0.1), &subsribeToChannel, socket, channelsToSebscribe[i],userName);
             }
-            for(int i=0;i<messagesToSend.size();i++){
+            for(uint16_t i=0;i<messagesToSend.size();i++){
                 Simulator::Schedule(Seconds(4 + channelsToSebscribe.size()*0.1 + 1 + i*0.1), &sendInfoToChannel, socket, messagesToSend[i].target , messagesToSend[i].content);
             }
             double totalTimeConsume = channelsToSebscribe.size()*0.1 + messagesToSend.size()*0.1 + 1;

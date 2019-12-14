@@ -13,14 +13,14 @@ using namespace ns3;
 
 int main(int argc, char* argv[]){
 
-    uint16_t numEnb = 2;
+    uint16_t numEnb = 4;
     uint16_t numUePerEnb = 3;
-    Time simTime = MilliSeconds (1100);
+    bool tracing = true;
 
     CommandLine cmd;
     cmd.AddValue ("numEnb", "Number of eNodeBs", numEnb);
     cmd.AddValue ("numUePerEnb", "Number of UE for each eNodeB", numUePerEnb);
-    cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
+    cmd.AddValue ("tracing", "Enable pcap tracing", tracing);
 
     cmd.Parse (argc, argv);
 
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]){
     ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
     Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
     // interface 0 is localhost, 1 is the p2p device
-    //Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
+    Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
 
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]){
     // 一个数组，包含一组已经安装了 TCP 协议的 client
 
     ClientWithMessages client1;
-    client1.node = remoteHost;
+    client1.node = pgw;
     std::vector<std::string> channels;
     channels.push_back("hhh");
     channels.push_back("xixi");
@@ -124,11 +124,18 @@ int main(int argc, char* argv[]){
     // ClientWithMessages client3;
     std::vector<ClientWithMessages> clients;
     clients.push_back(client1);
-    vStompApplication application = vStompApplication(pgw,internetIpIfaces.GetAddress(0),clients);
+    vStompApplication application = vStompApplication(remoteHost,remoteHostAddr,clients);
     application.start();
 
     Simulator::Stop(Seconds(20));
     NS_LOG_INFO("The simulation begins");
+
+    if (tracing == true)
+    {
+      p2ph.EnablePcapAll ("F4_ns3");
+//      lteHelper->EnableTraces();
+    }
+
     Simulator::Run ();
     Simulator::Destroy ();
 
