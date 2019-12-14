@@ -5,21 +5,27 @@
 #include "ns3/applications-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/csma-module.h"
-#include "ns3/yans-wifi-helper.h"
-#include "ns3/ssid.h"
+#include "ns3/lte-module.h"
+#include <ns3/buildings-helper.h>
 #include "vstomp.h"
 using namespace ns3;
 
 int main(int argc, char* argv[]){
 
+    uint16_t numEnb = 2;
+    uint16_t numUePerEnb = 3;
+    Time simTime = MilliSeconds (1100);
+    double distance = 60.0;
+
     CommandLine cmd;
-
-    uint32_t nCsma = 3;
-    uint32_t nWifi = 3;
-
-    cmd.AddValue ("nCsma", "Number of \"extra\" CSMA p2pNodes/devices", nCsma);
-    cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
+    cmd.AddValue ("numEnb", "Number of eNodeBs", numEnb);
+    cmd.AddValue ("numUePerEnb", "Number of UE for each eNodeB", numUePerEnb)
+    cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
+    cmd.AddValue ("distance", "Distance between eNBs [m]", distance);
     
+    ConfigStore inputConfig;
+    inputConfig.ConfigureDefaults ();
+
     cmd.Parse (argc, argv);
 
     if (nWifi > 18)
@@ -28,101 +34,80 @@ int main(int argc, char* argv[]){
       return 1;
     }
     
-    Time::SetResolution (Time::NS);
-    LogComponentEnable("F4ComputerNetwork",LOG_LEVEL_INFO);
-    // Physical & link
-    NodeContainer p2pNodes;
-    p2pNodes.Create (2);
+    Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
+    Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
+    lteHelper->SetEpcHelper (epcHelper);
 
-    PointToPointHelper pointToPoint;
-    pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-    pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+    Ptr<Node> pgw = epcHelper->GetPgwNode ();
 
-    NetDeviceContainer p2pDevices;
-    p2pDevices = pointToPoint.Install (p2pNodes);
+    // Create a single RemoteHost
+    NodeContainer remoteHostContainer;
+    remoteHostContainer.Create (1);
+    Ptr<Node> remoteHost = remoteHostContainer.Get (0);
+    InternetStackHelper internet;
+    internet.Install (remoteHostContainer);
 
-    NodeContainer csmaNodes;
-    csmaNodes.Add (p2pNodes.Get (1));
-    csmaNodes.Create (nCsma);
+    // Create the Internet
+    PointToPointHelper p2ph;
+    p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("100Gb/s")));
+    p2ph.SetDeviceAttribute ("Mtu", UintegerValue (1500));
+    p2ph.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (10)));
+    NetDeviceContainer internetDevices = p2ph.Install (pgw, remoteHost);
+    Ipv4AddressHelper ipv4h;
+    ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
+    Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
+    // interface 0 is localhost, 1 is the p2p device
+    Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
 
-    CsmaHelper csma;
-    csma.SetChannelAttribute ("DataRate", StringValue ("100Mbps"));
-    csma.SetChannelAttribute ("Delay", TimeValue (NanoSeconds (6560)));
-    
-    NetDeviceContainer csmaDevices;
-    csmaDevices = csma.Install (csmaNodes);
+    Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
+    remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 
-    NodeContainer wifiStaNodes;
-    wifiStaNodes.Create (nWifi);
-    NodeContainer wifiApNode = p2pNodes.Get (0);
-
-    YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-    YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
-    phy.SetChannel (channel.Create ());
-
-    WifiHelper wifi;
-    wifi.SetRemoteStationManager ("ns3::AarfWifiManager");
-
-    WifiMacHelper mac;
-    Ssid ssid = Ssid ("ns-3-ssid");
-    mac.SetType ("ns3::StaWifiMac",
-                "Ssid", SsidValue (ssid),
-                "ActiveProbing", BooleanValue (false));
-
-    NetDeviceContainer staDevices;
-    staDevices = wifi.Install (phy, mac, wifiStaNodes);
-
-    mac.SetType ("ns3::ApWifiMac",
-                "Ssid", SsidValue (ssid));
-
-    NetDeviceContainer apDevices;
-    apDevices = wifi.Install (phy, mac, wifiApNode);
+    NodeContainer ueNodes;
+    NodeContainer enbNodes;
+    enbNodes.Create (numEnb);
+    ueNodes.Create (numEnb*numUePerEnb);
 
     MobilityHelper mobility;
-
-    mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                    "MinX", DoubleValue (0.0),
-                                    "MinY", DoubleValue (0.0),
-                                    "DeltaX", DoubleValue (5.0),
-                                    "DeltaY", DoubleValue (10.0),
-                                    "GridWidth", UintegerValue (3),
-                                    "LayoutType", StringValue ("RowFirst"));
-
-    mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-                                "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
-    mobility.Install (wifiStaNodes);
-
     mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-    mobility.Install (wifiApNode);
+    mobility.Install (enbNodes);
+    BuildingsHelper::Install (enbNodes);
+    mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+    mobility.Install (ueNodes);
+    BuildingsHelper::Install (ueNodes);
 
-    // inter-networking
-    InternetStackHelper stack;
-    stack.Install (csmaNodes);
-    stack.Install (wifiApNode);
-    stack.Install (wifiStaNodes);
+    // Install LTE Devices to the nodes
+    NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
+    NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
 
-    NS_LOG_INFO("hello world");
-    Ipv4AddressHelper address;
-    address.SetBase ("10.1.1.0", "255.255.255.0");
+    // Install the IP stack on the UEs
+    internet.Install (ueNodes);
+    Ipv4InterfaceContainer ueIpIface;
+    ueIpIface = epcHelper->AssignUeIpv4Address (NetDeviceContainer (ueLteDevs));
+    // Assign IP address to UEs, and install applications
+    for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
+      {
+        Ptr<Node> ueNode = ueNodes.Get (u);
+        // Set the default gateway for the UE
+        Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ueNode->GetObject<Ipv4> ());
+        ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
+      }
 
-    address.SetBase ("10.1.1.0", "255.255.255.0");
-    Ipv4InterfaceContainer p2pInterfaces;
-    p2pInterfaces = address.Assign (p2pDevices);
-
-    address.SetBase ("10.1.2.0", "255.255.255.0");
-    Ipv4InterfaceContainer csmaInterfaces;
-    csmaInterfaces = address.Assign (csmaDevices);
-
-    address.SetBase ("10.1.3.0", "255.255.255.0");
-    address.Assign (staDevices);
-    address.Assign (apDevices);
+    // Attach one UE per eNodeB
+    for (uint16_t i = 0; i < numEnb; i++)
+      {
+        for (uint16_t j = 0; j < numUePerEnb; j++){
+          lteHelper->Attach (ueLteDevs.Get(i*numUePerEnb+j), enbLteDevs.Get(i));
+        }
+        // side effect: the default EPS bearer will be activated
+      }
 
     // 应用层
     // 需要的输入是一个已经安装了 TCP 协议的 server 以及它的 ns3::Ipv4Address 
     // 一个数组，包含一组已经安装了 TCP 协议的 client
 
     ClientWithMessages client1;
-    client1.node = csmaNodes.Get(1);
+    client1.node = ueNodes.Get(1);
     std::vector<std::string> channels;
     channels.push_back("hhh");
     channels.push_back("xixi");
@@ -142,7 +127,7 @@ int main(int argc, char* argv[]){
     // ClientWithMessages client3;
     std::vector<ClientWithMessages> clients;
     clients.push_back(client1);
-    vStompApplication application = vStompApplication(csmaNodes.Get(nCsma),csmaInterfaces.GetAddress(nCsma),clients);
+    vStompApplication application = vStompApplication(remoteHost,remoteHostAddr,clients);
     application.start();
 
     Simulator::Stop(Seconds(20));
