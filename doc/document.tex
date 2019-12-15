@@ -114,6 +114,9 @@ I love computer network. Challenging and interesting.
 可以看到，我们的vStomp协议可以支持基础的订阅者-发布者模式，我们的例子比较偏向于聊天，单人聊天在CONNECT命令之后就自动具备，而群聊可以通过共同收听某个频道来达成。虽然在我们的实现中信息都暂时是UTF-8的文本信息，但是拓展到二进制协议也是非常方便的。
 	\chapter{vStomp实现}
 	// 物理代码的描述
+	
+	下面叙述协议的整体工作方式。在物理层连接搭建完毕之后，我们会在其中一台机器上安装Server，在其他的各个机器上安装Client。使用Simulator::Schedul()函数来预约在模拟开始之后分别开启Server和Client服务。Server开启之后将会有一个空的哈希表，键是频道的名字，值是收听该频道的用户的集合，具体表达为类图 \ref{fig:main} 中vStompServer具有的类型为std::map<std::string,std::set<std::shared\_ptr<Client-Stub> > >的变量。而后随着计划的时间到来，Client向Server预先设置好的信息之后，Server将依照前面我们所描述的协议内容进行处理，并始终保持上述变量的正确性，从而可以向应当接受某条信息的用户发送信息。 
+	
 	我们使用ns-3提供的类socket接口对本协议进行了实现，虽然我们在实验的过程中可以感受到ns-3可能并不是为了应用层的协议而创造的\footnote{这一点在Packet类很难支持包含真正内容而可以很轻松的指定大小可以看出，ns-3可能更适合进行对网络下面几层的研究}，但是我们仍旧克服困难，对vStomp协议进行了实现。基本的类图如下所示\begin{figure}[H]
 		\centering
 		\includegraphics[width=0.86\linewidth]{img/Main}
