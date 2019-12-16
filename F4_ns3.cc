@@ -13,7 +13,7 @@ using namespace ns3;
 
 int main(int argc, char* argv[]){
 
-    uint16_t numEnb = 4;
+    uint16_t numEnb = 2;
     uint16_t numUePerEnb = 3;
     bool tracing = true;
 
@@ -106,7 +106,8 @@ int main(int argc, char* argv[]){
 
     //client1
     ClientWithMessages client1;
-    client1.node = pgw;
+    // client1.node = pgw;
+    client1.node = ueNodes.Get(0);
     std::vector<std::string> channels;
     channels.push_back("LifeInTongji");
     channels.push_back("ComputerNetWork");
@@ -137,8 +138,10 @@ int main(int argc, char* argv[]){
     message2_2.content="I have a question! Why is TCP/IP important?";
     messages2.push_back(message2_1);
     messages2.push_back(message2_2);
+    client2.channelsTosub = channel2;
+    client2.messagesToSend = messages2;
     // 主要是这里应该选择哪个点？
-    client2.node = ueNodes.Get(0);
+    client2.node = ueNodes.Get(1);
 
     //client 3
     ClientWithMessages client3;
@@ -154,8 +157,10 @@ int main(int argc, char* argv[]){
     message3_2.content="I don't need to subscribe to this channel to send you a message!";
     messages3.push_back(message3_1);
     messages3.push_back(message3_2);
+    client3.channelsTosub = channel3;
+    client3.messagesToSend = messages3;
     // 主要是这里应该选择哪个点？
-    client3.node = ueNodes.Get(1);
+    client3.node = ueNodes.Get(2);
 
     //client 4
     ClientWithMessages client4;
@@ -171,8 +176,10 @@ int main(int argc, char* argv[]){
     message4_2.content="Have you finished your homework?";
     messages4.push_back(message4_1);
     messages4.push_back(message4_2);
+    client4.channelsTosub = channel4;
+    client4.messagesToSend = messages4;
     // 主要是这里应该选择哪个点？
-    client4.node = ueNodes.Get(2);
+    client4.node = ueNodes.Get(3);
 
     // ClientWithMessages client2;
     // ClientWithMessages client3;
@@ -184,7 +191,7 @@ int main(int argc, char* argv[]){
     vStompApplication application = vStompApplication(remoteHost,remoteHostAddr,clients);
     application.start();
 
-    Simulator::Stop(Seconds(20));
+    Simulator::Stop(Seconds(50));
     NS_LOG_INFO("The simulation begins");
 
     if (tracing == true)

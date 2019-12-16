@@ -280,18 +280,18 @@ class Client{
                 Simulator::Schedule(Seconds(4 + i*0.1), &subsribeToChannel, socket, channelsToSebscribe[i],userName);
             }
             for(uint16_t i=0;i<messagesToSend.size();i++){
-                Simulator::Schedule(Seconds(4 + channelsToSebscribe.size()*0.1 + 1 + i*0.1), &sendInfoToChannel, socket, messagesToSend[i].target , messagesToSend[i].content);
+                Simulator::Schedule(Seconds(8 + channelsToSebscribe.size()*0.1 + 1 + i*0.1), &sendInfoToChannel, socket, messagesToSend[i].target , messagesToSend[i].content);
             }
             double totalTimeConsume = channelsToSebscribe.size()*0.1 + messagesToSend.size()*0.1 + 1;
-            Simulator::Schedule(Seconds(4 + totalTimeConsume + 0.5), &unsubscribeToChannel,socket,userName,"hhh");
-            Simulator::Schedule(Seconds(4 + totalTimeConsume + 1),&disConnect,socket,userName);
+            // Simulator::Schedule(Seconds(4 + totalTimeConsume + 0.5), &unsubscribeToChannel,socket,userName,"hhh");
+            Simulator::Schedule(Seconds(15 + totalTimeConsume + 1),&disConnect,socket,userName);
         } 
         void display(Ptr<Socket> socket){
             Ptr<Packet> packet = socket->Recv();
             std::ostringstream* contentStream = new std::ostringstream();
             packet->CopyData(contentStream,(uint32_t)INT_MAX);
             std::string content = (*contentStream).str();
-            NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s ["+ CLASSNAME +"]:             " + "GETTING the following frame\n"  
+            NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s ["+ CLASSNAME +"]:             " + userName + " GETTING the following frame\n"  
             + "==========================================\n" + content  + "\n==========================================");
         }
     public:
