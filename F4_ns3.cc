@@ -14,11 +14,13 @@ int main(int argc, char* argv[]){
     uint16_t numEnb = 3;
     uint16_t numUePerEnb = 3;
     double distance = 60.0;
+    uint16_t numClient = 3;
     bool tracing = true;
 
     CommandLine cmd;
     cmd.AddValue ("numEnb", "Number of eNodeBs", numEnb);
     cmd.AddValue ("numUePerEnb", "Number of UE for each eNodeB", numUePerEnb);
+    cmd.AddValue ("numClient", "Number of clients of Vstomp protocol", numClient);
     cmd.AddValue ("tracing", "Enable pcap tracing", tracing);
 
     cmd.Parse (argc, argv);
@@ -64,25 +66,28 @@ int main(int argc, char* argv[]){
     enbNodes.Create (numEnb);
     ueNodes.Create (numEnb*numUePerEnb);
 
-    Ptr<ListPositionAllocator> positionAllocEnb = CreateObject<ListPositionAllocator> ();
-    for (uint16_t i = 0; i < numEnb; i++)
-    {
-      positionAllocEnb->Add (Vector (distance * i, 0, 0));
-    }
-    Ptr<ListPositionAllocator> positionAllocEu = CreateObject<ListPositionAllocator> ();
+    MobilityHelper mobility;
+    mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+                                 "MinX", DoubleValue (0.0),
+                                 "MinY", DoubleValue (0.0),
+                                 "DeltaX", DoubleValue (distance),
+                                 "DeltaY", DoubleValue (distance),
+                                 "GridWidth", UintegerValue (3),
+                                 "LayoutType", StringValue ("RowFirst"));
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(enbNodes);
+
     for (uint16_t i = 0; i < numEnb; i++)
     {
       for(uint16_t j=0;j<numUePerEnb;j++){
-        positionAllocEu->Add (Vector (distance * i + j, 0, 0));
+	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
+	positionAlloc->Add (Vector (distance*(i%3+1), distance*(i/3+1), 0));
+	mobility.SetPositionAllocator(positionAlloc);
+        mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+                             "Bounds", RectangleValue (Rectangle (distance*(i%3+1)-20, distance*(i%3+1)+20, distance*(i/3+1)-20, distance*(i/3+1)+20)));
+        mobility.Install(ueNodes.Get(i*numUePerEnb+j));
       }
     }
-    MobilityHelper mobility;
-    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.SetPositionAllocator(positionAllocEnb);
-    mobility.Install(enbNodes);
-    mobility.SetPositionAllocator(positionAllocEu);
-    mobility.Install(ueNodes);
-
 
     // Install LTE Devices to the nodes
     NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
@@ -113,28 +118,35 @@ int main(int argc, char* argv[]){
     // 应用层
     // 需要的输入是一个已经安装了 TCP 协议的 server 以及它的 ns3::Ipv4Address 
     // 一个数组，包含一组已经安装了 TCP 协议的 client
-
-    ClientWithMessages client1;
-    client1.node = ueNodes.Get(1);
-    std::vector<std::string> channels;
-    channels.push_back("hhh");
-    channels.push_back("xixi");
-    std::vector<Message> messages;
-    Message message1;
-    message1.target="zzj";
-    message1.content="say hello to myself";
-    Message message2;
-    message2.target="hhh";
-    message2.content="try out my channel";
-    messages.push_back(message1);
-    messages.push_back(message2);
-    client1.userName="zzj";
-    client1.channelsTosub = channels;
-    client1.messagesToSend = messages;
-    // ClientWithMessages client2;
-    // ClientWithMessages client3;
     std::vector<ClientWithMessages> clients;
-    clients.push_back(client1);
+    RngSeedManager::SetSeed (3);
+    Ptr<UniformRandomVariable> randomNumGenerator = CreateObject<UniformRandomVariable> ();
+
+    for(uint16_t i=0;i<numClient;i++){
+      uint16_t randomNum = randomNumGenerator->GetInteger ();
+      ClientWithMessages vStompClient;
+      vStompClient.node = ueNodes.Get(randomNum);
+      std::vector<std::string> channels;
+      channels.push_back("hhh");
+      channels.push_back("xixi");
+      std::vector<Message> messages;
+      Message message1;
+      message1.target="zzj";
+      message1.content="I'm client "+std::to_string(i)+" from UE "+std::to_string(randomNum);
+      Message message2;
+      message2.target="hhh";
+      message2.content="try out my channel";
+      messages.push_back(message1);
+      messages.push_back(message2);
+      vStompClient.userName="zzj";
+      vStompClient.channelsTosub = channels;
+      vStompClient.messagesToSend = messages;
+      // ClientWithMessages client2;
+      // ClientWithMessages client3;
+      clients.push_back(vStompClient);
+    }
+
+
     vStompApplication application = vStompApplication(remoteHost,remoteHostAddr,clients);
     application.start();
 
