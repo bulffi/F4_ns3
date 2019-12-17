@@ -54,7 +54,6 @@ int main(int argc, char* argv[]){
     Ipv4AddressHelper ipv4h;
     ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
     Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
-    // interface 0 is localhost, 1 is the p2p device
     Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
 
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
@@ -80,9 +79,9 @@ int main(int argc, char* argv[]){
     for (uint16_t i = 0; i < numEnb; i++)
     {
       for(uint16_t j=0;j<numUePerEnb;j++){
-	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-	positionAlloc->Add (Vector (distance*(i%3+1), distance*(i/3+1), 0));
-	mobility.SetPositionAllocator(positionAlloc);
+        Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
+        positionAlloc->Add (Vector (distance*(i%3+1), distance*(i/3+1), 0));
+        mobility.SetPositionAllocator(positionAlloc);
         mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
                              "Bounds", RectangleValue (Rectangle (distance*(i%3+1)-20, distance*(i%3+1)+20, distance*(i/3+1)-20, distance*(i/3+1)+20)));
         mobility.Install(ueNodes.Get(i*numUePerEnb+j));
@@ -97,11 +96,9 @@ int main(int argc, char* argv[]){
     internet.Install (ueNodes);
     Ipv4InterfaceContainer ueIpIface;
     ueIpIface = epcHelper->AssignUeIpv4Address (NetDeviceContainer (ueLteDevs));
-    // Assign IP address to UEs, and install applications
     for (uint16_t u = 0; u < ueNodes.GetN (); ++u)
       {
         Ptr<Node> ueNode = ueNodes.Get (u);
-        // Set the default gateway for the UE
         Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ueNode->GetObject<Ipv4> ());
         ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
       }
