@@ -38,6 +38,52 @@
 		\item 《ns-3网络模拟器基础及应用 》
 	\end{itemize}
 	\chapter{实验拓扑结构}
+	\section{网络结构简介}
+	实验中，我们选择最具代表性的蜂窝网络LTE结构来作为虚拟网络环境，一个蜂窝网络的典型结构如图\ref{fig:topology}所示。其中UE即用户设备，我们将从中随机选择一定数量的用户设备作为我们Stomp协议的客户端，eNB为无线基站，PGW为PNG网关，SGW为服务网关，MME为移动性管理组件。在网络的另一端，我们使用一个点对点网络连接PGW和模拟的远程主机，即我们Stomp协议的服务端。
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.9\linewidth]{img/topology}
+		\caption{网络拓扑图}
+		\label{fig:topology}
+	\end{figure}
+	
+	\section{网络参数设置}
+	这里我们允许通过命令行参数对\textit{基站数量}、\textit{单个基站对应的用户设备数量}、\textit{参与Stomp的客户端主机数量}以及\textit{是否进行数据报追踪}进行设置。
+	
+	我们在基站（eNB结点）上应用\emph{静止的移动模型}，空间布局为网格状排列，每行三个基站，基站之间水平/竖直距离均为60米。我们在用户设备（UE结点）上应用\emph{随机移动模型}，设置用户模型在一个以其对应的无线服务基站为中心的，边长为40米的正方形范围内进行随机移动，移动速度设为默认。
+	
+	对于蜂窝网络，所有的用户设备都默认被分配在7.0.0.0/8这一网段中；对于远程主机和PGW构成的点对点网络，我们设置100Gb/s的数据传输速率、1500bytes的最大传输单元以及10ms传输延迟，同时，将其分配到1.0.0.0/8这一网段中。
+	
+	\begin{lstlisting}[language=c++]
+    PointToPointHelper p2ph;
+    p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("100Gb/s")));
+    p2ph.SetDeviceAttribute ("Mtu", UintegerValue (1500));
+    p2ph.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (10)));
+    NetDeviceContainer internetDevices = p2ph.Install (pgw, remoteHost);
+    Ipv4AddressHelper ipv4h;
+    ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
+    Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
+    Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
+	\end{lstlisting}
+	
+	此外，在追踪数据报的过程中，我们观测到了14.0.0.0/8、13.0.0.0/8以及10.0.0.0/8网段，我们推测这些网段是本身在LTE蜂窝网络的内部实现中就已经被封装好的，用以给诸如SGW、MME等模拟网络结点的设备进行使用。在本实验，它们作为远程主机服务端和用户设备客户端交换数据报的必不可少的中介，我们并不需要具体考虑它们的底层实现细节，远程主机、PGW和用户设备之间的交互才是我们关注的重点。
+	
+	基于上述的网络结构，我们为远程主机配置了7.0.0.0/8网段的静态路由，为用户设备配其置默认路由为默认网关（即其对应的基站地址）。如下所示
+	\begin{lstlisting}[language=c++]
+	Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
+    remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
+    
+    Ipv4InterfaceContainer ueIpIface;
+    ueIpIface = epcHelper->AssignUeIpv4Address (NetDeviceContainer (ueLteDevs));
+    for (uint16_t u = 0; u < ueNodes.GetN (); ++u)
+      {
+        Ptr<Node> ueNode = ueNodes.Get (u);
+        Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ueNode->GetObject<Ipv4> ());
+        ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
+      }
+	\end{lstlisting}
+	
 	
 	\chapter{vStomp协议}
 	\section{Stomp 协议简介}
