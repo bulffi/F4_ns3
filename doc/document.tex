@@ -89,7 +89,7 @@
 	\section{Stomp 协议简介}
 	Stomp协议是一种简单而易于实现的协议，经常被用于\textbf{Websocket}协议上从而实现Web端的实时通信功能。在我们本学期的其他项目中，为了实现Web端的在线聊天功能，我们采用的就是Stomp协议，因此对于本协议所受到的广泛支持\footnote{前端可以直接使用JavaScript中相应的库而成为Stomp Client，后端Spring Boot框架中自带必要的支持，而类似于RabbitMQ、Kafka以及ActiveMQ这样的消息队列都提供了官方的插件成为高性能的 Stomp Server。}印象深刻，也正是这次接触使得我们决定在计算机网络实验的自选项目中尝试对本协议进行模拟。
 	
-	Stomp协议的全称是 \textbf{Simple Text Oriented Messaging Protocal}，正如这个名字中所暗示的那样，它的设计哲学就是简明与可交互性，用户可以自主进行一系列约定从而达成自己的目标。因此每个部分的具体信息都相当灵活，使得Stomp可以被用于各种各样的系统之中。
+	Stomp协议的全称是 \textbf{Simple Text Oriented Messaging Protocol}，正如这个名字中所暗示的那样，它的设计哲学就是简明与可交互性，用户可以自主进行一系列约定从而达成自己的目标。因此每个部分的具体信息都相当灵活，使得Stomp可以被用于各种各样的系统之中。
 	
 	Stomp的帧格式如下：
 	\begin{lstlisting}
@@ -109,7 +109,7 @@ bodyEOF
 		\label{fig:stompdemo}
 	\end{figure}
 	\section{vStomp协议详述}
-	在我们的自选实验中，我们对Stomp协议中一些不常用的功能进行了删除，对一些较为复杂对约定进行了简化之后，得到了我们自己的协议，我们生动的为之命名vStomp，very Simple Text Oriented Messaging Protocal。下面我们对各个命令做出说明
+	在我们的自选实验中，我们对Stomp协议中一些不常用的功能进行了删除，对一些较为复杂的约定进行了简化之后，得到了我们自己的协议，我们生动的为之命名vStomp，very Simple Text Oriented Messaging Protocol。下面我们对各个命令做出说明
 	\begin{enumerate}
 		\item \textbf{CONNECT命令}。在用户初次进入系统时，需要向Server注册，发送以下格式的帧\begin{lstlisting}
 CONNECT
@@ -159,8 +159,6 @@ I love computer network. Challenging and interesting.
 
 可以看到，我们的vStomp协议可以支持基础的订阅者-发布者模式，我们的例子比较偏向于聊天，单人聊天在CONNECT命令之后就自动具备，而群聊可以通过共同收听某个频道来达成。虽然在我们的实现中信息都暂时是UTF-8的文本信息，但是拓展到二进制协议也是非常方便的。
 	\chapter{vStomp实现}
-	// 物理代码的描述
-	
 	下面叙述协议的整体工作方式。在物理层连接搭建完毕之后，我们会在其中一台机器上安装Server，在其他的各个机器上安装Client。使用Simulator::Schedul()函数来预约在模拟开始之后分别开启Server和Client服务。Server开启之后将会有一个空的哈希表，键是频道的名字，值是收听该频道的用户的集合，具体表达为类图 \ref{fig:main} 中vStompServer具有的类型为std::map<std::string,std::set<std::shared\_ptr<Client-Stub> > >的变量。而后随着计划的时间到来，Client向Server预先设置好的信息之后，Server将依照前面我们所描述的协议内容进行处理，并始终保持上述变量的正确性，从而可以向应当接受某条信息的用户发送信息。 
 	
 	我们使用ns-3提供的类socket接口对本协议进行了实现，虽然我们在实验的过程中可以感受到ns-3可能并不是为了应用层的协议而创造的\footnote{这一点在Packet类很难支持包含真正内容而可以很轻松的指定大小可以看出，ns-3可能更适合进行对网络下面几层的研究}，但是我们仍旧克服困难，对vStomp协议进行了实现。基本的类图如下所示\begin{figure}[H]

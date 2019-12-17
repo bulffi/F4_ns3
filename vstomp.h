@@ -273,7 +273,7 @@ class Client{
         void connectionSucceeded(Ptr<Socket> socket){
             std::string content = "CONNECT\nname:" + userName + "\n\n\000";
             NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s ["+ CLASSNAME +"]:             " + "SENDING the following frame\n" 
-            + "\n\n==========================================\n" + content +"\n==========================================");
+            + "==========================================\n" + content +"\n==========================================");
             socket->Send(Create<Packet>(
             reinterpret_cast<const uint8_t*>(content.c_str()),content.length()));
             for(uint16_t i =0;i<channelsToSebscribe.size();i++){
@@ -292,7 +292,7 @@ class Client{
             packet->CopyData(contentStream,(uint32_t)INT_MAX);
             std::string content = (*contentStream).str();
             NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s ["+ CLASSNAME +"]:             " + userName + " GETTING the following frame\n"  
-            + "\n\n==========================================\n" + content  + "\n==========================================");
+            + "==========================================\n" + content  + "\n==========================================");
         }
     public:
         Client(Ptr<Socket> _clientSocket, Ipv4Address address, uint32_t port, std::string _userName,std::vector<std::string> _channelsToSubsribe, std::vector<Message> _messagesToSend){
@@ -314,7 +314,7 @@ void startFlow(Ptr<Socket> clientSocket, Ipv4Address address, uint32_t port, std
 void sendInfoToChannel(Ptr<Socket> socket, std::string target, std::string content){
     std::string greeting = "SEND\ntarget:" +target +"\n\n" + content +"\000";
      NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s [Client]:             " + "SENDING the following frame\n" 
-            + "\n\n==========================================\n" + greeting +"\n==========================================");
+            + "==========================================\n" + greeting +"\n==========================================");
     socket->Send(Create<Packet>(
         reinterpret_cast<const uint8_t*>(greeting.c_str()), greeting.length()));
 }
@@ -322,7 +322,7 @@ void sendInfoToChannel(Ptr<Socket> socket, std::string target, std::string conte
 void subsribeToChannel(Ptr<Socket>socket,std::string channelName,std::string userName){
     std::string subs = "SUBSCRIBE\nchannel:" + channelName + "\nname:" + userName + "\n\n\000";
     NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s [Client]:             " + "SENDING the following frame\n" 
-            + "\n\n==========================================\n" + subs +"\n==========================================");
+            + "==========================================\n" + subs +"\n==========================================");
      socket->Send(Create<Packet>(
         reinterpret_cast<const uint8_t*>(subs.c_str()),subs.length()));
 }
@@ -330,7 +330,7 @@ void subsribeToChannel(Ptr<Socket>socket,std::string channelName,std::string use
 void disConnect(Ptr<Socket>socket, std::string clientName){
     std::string disconnect = "DISCONNECT\nname:" + clientName +"\n\n\000";
     NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s [Client]:             " + "SENDING the following frame\n" 
-            + "\n\n==========================================\n" + disconnect +"\n==========================================");
+            + "==========================================\n" + disconnect +"\n==========================================");
     socket->Send(Create<Packet>(
         reinterpret_cast<const uint8_t*>(disconnect.c_str()),disconnect.length()));
 }
@@ -338,7 +338,7 @@ void disConnect(Ptr<Socket>socket, std::string clientName){
 void unsubscribeToChannel(Ptr<Socket>socket, std::string userName, std::string channelToUnsubscribe){
     std::string unsubscribe = "UNSUBSCRIBE\nname:" + userName + "\nchannel:" + channelToUnsubscribe +"\n\n\000";
     NS_LOG_INFO(std::to_string(Simulator::Now().GetSeconds()) +"s [Client]:             " + "SENDING the following frame\n" 
-            + "\n\n==========================================\n" + unsubscribe +"\n==========================================");
+            + "==========================================\n" + unsubscribe +"\n==========================================");
     socket->Send(Create<Packet>(
         reinterpret_cast<const uint8_t*>(unsubscribe.c_str()),unsubscribe.length()));
 }
